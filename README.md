@@ -24,6 +24,7 @@ DataSentinel is a lightweight, reliable, and transparent data quality and observ
 datasentinel/
 ├── .gitignore               # Ignored caches, virtual environments, reports, and secrets
 ├── README.md                # Project documentation and scoring specification
+├── requirements.txt         # Minimal runtime dependencies (Streamlit)
 ├── sample.csv               # Existing test dataset (preserved)
 ├── main.py                  # CLI entry point and terminal report renderer
 ├── app.py                   # Streamlit interactive web dashboard
@@ -86,19 +87,48 @@ Bounded between $0.0$ and $100.0$, rounded to 2 decimal places. If $R = 0$, $S_{
 
 ---
 
-## 4. Run & Test Instructions
+## 4. Installation & Setup
 
-### Running the Interactive Web Dashboard
+### Supported Python Version
+- **Python 3.9+** (tested and verified up through **Python 3.13**).
+- The core data quality engine (`core/`), CLI (`main.py`), and test suite (`tests/`) rely exclusively on the Python standard library (`dataclasses`, `csv`, `pathlib`, `typing`, `math`).
+- The interactive web dashboard (`app.py`) requires `streamlit>=1.28.0`.
 
-Launch the Streamlit app:
+### Step 1: Clone and Enter the Repository
+
 ```bash
-python -m streamlit run app.py
+git clone https://github.com/thakurbarkha802-wq/data-sentinel.git
+cd data-sentinel
 ```
-Open your browser at `http://localhost:8501`.
+
+### Step 2: Create and Activate a Virtual Environment
+
+- **On Windows (Command Prompt / PowerShell)**:
+  ```powershell
+  python -m venv .venv
+  .venv\Scripts\activate
+  ```
+
+- **On macOS / Linux**:
+  ```bash
+  python3 -m venv .venv
+  source .venv/bin/activate
+  ```
+
+### Step 3: Install Dependencies
+
+Install the minimal runtime dependencies:
+```bash
+python -m pip install -r requirements.txt
+```
+
+---
+
+## 5. Run & Test Instructions
 
 ### Running the Terminal CLI
 
-Audit the default `sample.csv`:
+Audit the default `sample.csv` dataset:
 ```bash
 python main.py
 ```
@@ -108,21 +138,47 @@ Audit an arbitrary CSV file:
 python main.py path/to/your_dataset.csv
 ```
 
+### Running the Interactive Web Dashboard
+
+Launch the Streamlit web application:
+```bash
+python -m streamlit run app.py
+```
+Open your browser at `http://localhost:8501`.
+
+### Exporting Results
+
+- **From the Interactive Web Dashboard**:
+  1. Upload a CSV file or load the sample dataset.
+  2. Configure any optional column validation rules.
+  3. Navigate to the **📥 Export Report** tab in the main view.
+  4. Optionally inspect the sanitized JSON payload in the **Preview JSON Export** expander.
+  5. Click **⬇️ Download Quality Report (JSON)** to save `datasentinel_report_<dataset_name>.json`.
+  *(All local disk paths and system details are automatically stripped to protect confidentiality.)*
+
+- **From the Terminal CLI**:
+  Redirect standard output to persist the terminal audit report:
+  ```bash
+  python main.py sample.csv > audit_report.txt
+  ```
+
 ### Running the Automated Test Suite
 
-Using Python's built-in `unittest` runner:
-```bash
-python -m unittest discover -s tests -v
-```
+- **Primary Test Runner (Built-in `unittest`)**:
+  Zero external test dependencies required. Runs all 56 unit and integration tests:
+  ```bash
+  python -m unittest discover -s tests -v
+  ```
 
-Using `pytest` (if installed in your environment):
-```bash
-pytest tests/ -v
-```
+- **Alternative Runner (`pytest`)**:
+  If `pytest` is installed in your development environment:
+  ```bash
+  pytest tests/ -v
+  ```
 
 ---
 
-## 5. Current Limitations
+## 6. Current Limitations
 
 1. **File Format**: Only tabular `.csv` files are currently parsed (Excel `.xlsx`, Parquet, and SQL connections are not yet supported).
 2. **Rule Persistence**: Interactive rules in the dashboard persist within the current session, but cannot yet be imported from or saved to external YAML/JSON configuration files.
