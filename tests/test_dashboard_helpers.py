@@ -118,6 +118,7 @@ class TestDashboardHelpers(unittest.TestCase):
     def test_build_download_filename(self):
         self.assertEqual(build_download_filename("customer data.csv"), "datasentinel_report_customer_data.json")
         self.assertEqual(build_download_filename(r"C:\Secret\sales.csv"), "datasentinel_report_sales.json")
+        self.assertEqual(build_download_filename("/var/log/data/metrics.csv"), "datasentinel_report_metrics.json")
 
     def test_get_score_color(self):
         self.assertEqual(get_score_color(95.0), "#28a745")

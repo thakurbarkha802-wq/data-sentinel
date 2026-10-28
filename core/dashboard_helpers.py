@@ -6,7 +6,7 @@ lightweight header extraction, and input validation.
 
 import csv
 import io
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 from typing import Any, Dict, List, MutableMapping, Optional, Tuple
 
 from .loader import deduplicate_headers
@@ -99,8 +99,8 @@ def parse_rule_form_inputs(
 
 def build_download_filename(display_name: str) -> str:
     """Builds a sanitized report download filename based on the dataset name."""
-    clean_base = Path(display_name).stem if display_name else "dataset"
-    clean_base = clean_base.replace(" ", "_")
+    clean_base = PureWindowsPath(display_name).stem if display_name else "dataset"
+    clean_base = (clean_base or "dataset").replace(" ", "_")
     return f"datasentinel_report_{clean_base}.json"
 
 
