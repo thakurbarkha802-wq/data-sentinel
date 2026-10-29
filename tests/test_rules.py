@@ -124,6 +124,18 @@ class TestColumnRules(unittest.TestCase):
             ColumnRule(column="flag", data_type="boolean")
         self.assertIn("unsupported data_type", str(ctx.exception).lower())
 
+    def test_rule_is_constrained(self):
+        """Verifies is_constrained accurately distinguishes enforceable rules from unconstrained ones."""
+        # Enforceable rules
+        self.assertTrue(ColumnRule(column="age", data_type="int").is_constrained)
+        self.assertTrue(ColumnRule(column="price", data_type="float").is_constrained)
+        self.assertTrue(ColumnRule(column="score", min_value=0.0).is_constrained)
+        self.assertTrue(ColumnRule(column="score", max_value=100.0).is_constrained)
+
+        # Unconstrained rules
+        self.assertFalse(ColumnRule(column="name", data_type="str").is_constrained)
+        self.assertFalse(ColumnRule(column="notes").is_constrained)
+
 
 if __name__ == "__main__":
     unittest.main()

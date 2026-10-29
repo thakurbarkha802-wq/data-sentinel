@@ -53,6 +53,15 @@ class ColumnRule:
                     f"min_value ({self.min_value}) cannot exceed max_value ({self.max_value})."
                 )
 
+    @property
+    def is_constrained(self) -> bool:
+        """Indicates whether this rule defines any enforceable constraint that can fail validation."""
+        if self.data_type in ("int", "float"):
+            return True
+        if self.min_value is not None or self.max_value is not None:
+            return True
+        return False
+
     def describe(self) -> str:
         parts = []
         if self.data_type:

@@ -181,22 +181,23 @@ class DataSentinel:
                 else:
                     # Value is present, check if column has a configured validation rule
                     if col_name in self.rules:
-                        evaluated_cells_count += 1
                         rule = self.rules[col_name]
-                        is_valid, failure_reason = rule.validate(cell_value)
-                        
-                        if not is_valid:
-                            invalid_count += 1
-                            col_summaries[col_name].invalid_count += 1
-                            report.issues.append(
-                                QualityIssue(
-                                    issue_type="invalid_value",
-                                    row_number=line_no,
-                                    column=col_name,
-                                    message=failure_reason or f"Invalid value in '{col_name}'",
-                                    value=cell_value,
+                        if getattr(rule, "is_constrained", True):
+                            evaluated_cells_count += 1
+                            is_valid, failure_reason = rule.validate(cell_value)
+
+                            if not is_valid:
+                                invalid_count += 1
+                                col_summaries[col_name].invalid_count += 1
+                                report.issues.append(
+                                    QualityIssue(
+                                        issue_type="invalid_value",
+                                        row_number=line_no,
+                                        column=col_name,
+                                        message=failure_reason or f"Invalid value in '{col_name}'",
+                                        value=cell_value,
+                                    )
                                 )
-                            )
 
         report.missing_values_count = missing_count
         report.invalid_values_count = invalid_count

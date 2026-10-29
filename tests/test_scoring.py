@@ -98,6 +98,28 @@ class TestScoringSystem(unittest.TestCase):
         self.assertEqual(report.invalid_values_count, 1)
         self.assertEqual(report.scores.validity, 75.0)
 
+    def test_plain_string_rule_does_not_inflate_validity_score(self):
+        """A plain data_type='str' rule has no enforceable constraints and must not inflate validity."""
+        headers = ["id", "age", "city"]
+        rows = [
+            ["1", "20", "Delhi"],
+            ["2", "30", "Mumbai"],
+            ["3", "-10", "Kolkata"],  # invalid age
+            ["4", "40", "Chennai"],
+        ]
+        # Without string rule, validity is 75.0% (3/4 valid in 'age').
+        # Adding a plain string rule on 'city' must NOT dilute/inflate validity to (7/8 = 87.5%).
+        analyzer = DataSentinel(
+            rules={
+                "age": ColumnRule(column="age", data_type="int", min_value=0, max_value=100),
+                "city": ColumnRule(column="city", data_type="str"),
+            }
+        )
+        report = analyzer.analyze_data(headers, rows)
+
+        self.assertEqual(report.invalid_values_count, 1)
+        self.assertEqual(report.scores.validity, 75.0)
+
     def test_validity_when_no_rules_configured(self):
         # If no rules are configured at all, validity should default to 100.0%
         headers = ["name", "city"]
@@ -109,6 +131,69 @@ class TestScoringSystem(unittest.TestCase):
         report = analyzer.analyze_data(headers, rows)
 
         self.assertEqual(report.scores.validity, 100.0)
+
+    def test_validity_when_only_unconstrained_rules_configured(self):
+        # If only unconstrained rules (like data_type='str') are configured, validity should default to 100.0%
+        headers = ["name", "city"]
+        rows = [
+            ["Aman", "Delhi"],
+            ["Riya", "Mathura"],
+        ]
+        analyzer = DataSentinel(rules={"city": ColumnRule(column="city", data_type="str")})
+        report = analyzer.analyze_data(headers, rows)
+
+        self.assertEqual(report.scores.validity, 100.0)
+
+    def test_unconstrained_custom_rule_cannot_create_invalid_findings_or_distort_validity(self):
+        """Custom rules with is_constrained=False are excluded from validity evaluation."""
+        class MockUnconstrainedRejectingRule:
+            is_constrained = False
+            def validate(self, val):
+                return False, "Rejected by unconstrained rule"
+            def describe(self):
+                return "Mock Unconstrained Rule"
+
+        headers = ["id", "age", "notes"]
+        rows = [
+            ["1", "20", "val1"],
+            ["2", "30", "val2"],
+            ["3", "-10", "val3"],  # invalid age (1 of 4 invalid)
+            ["4", "40", "val4"],
+        ]
+        # 'notes' has an unconstrained rule that would reject values,
+        # but because is_constrained=False, 'notes' is excluded from validity evaluation.
+        # It must not generate invalid findings or distort validity from 75.0%.
+        analyzer = DataSentinel(
+            rules={
+                "age": ColumnRule(column="age", data_type="int", min_value=0, max_value=100),
+                "notes": MockUnconstrainedRejectingRule(),
+            }
+        )
+        report = analyzer.analyze_data(headers, rows)
+
+        self.assertEqual(report.invalid_values_count, 1)
+        self.assertEqual(report.scores.validity, 75.0)
+        invalid_issues = [i for i in report.issues if i.issue_type == "invalid_value"]
+        self.assertEqual(len(invalid_issues), 1)
+        self.assertEqual(invalid_issues[0].column, "age")
+
+    def test_legacy_custom_rule_without_is_constrained_defaults_to_constrained(self):
+        """Custom or legacy rule objects that omit is_constrained default safely to constrained."""
+        class LegacyCustomRule:
+            def validate(self, val):
+                if val == "bad":
+                    return False, "Legacy rejection"
+                return True, None
+            def describe(self):
+                return "Legacy Rule"
+
+        headers = ["status"]
+        rows = [["good"], ["bad"]]
+        analyzer = DataSentinel(rules={"status": LegacyCustomRule()})
+        report = analyzer.analyze_data(headers, rows)
+
+        self.assertEqual(report.invalid_values_count, 1)
+        self.assertEqual(report.scores.validity, 50.0)
 
     def test_weighted_overall_score_formula(self):
         # Verify: Overall = (0.35 * completeness) + (0.35 * validity) + (0.30 * uniqueness)
