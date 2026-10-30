@@ -6,7 +6,7 @@ without hardcoding schema details into the engine.
 
 import math
 from dataclasses import dataclass
-from typing import Optional, Tuple, Any
+from typing import Optional, Tuple, Any, Union
 
 
 @dataclass
@@ -14,8 +14,8 @@ class ColumnRule:
     """Validation rule for a specific CSV column."""
     column: str
     data_type: Optional[str] = None  # "int", "float", "str"
-    min_value: Optional[float] = None
-    max_value: Optional[float] = None
+    min_value: Optional[Union[int, float]] = None
+    max_value: Optional[Union[int, float]] = None
 
     def __post_init__(self) -> None:
         """Validates configuration parameters upon rule creation."""
@@ -33,17 +33,20 @@ class ColumnRule:
                 f"cannot be configured with data_type='str'."
             )
 
-        # 3. Reject NaN or infinite values in range bounds
-        if self.min_value is not None:
-            if math.isnan(self.min_value) or math.isinf(self.min_value):
-                raise ValueError(
-                    f"Column '{self.column}': min_value must be a finite number, found {self.min_value}."
-                )
-        if self.max_value is not None:
-            if math.isnan(self.max_value) or math.isinf(self.max_value):
-                raise ValueError(
-                    f"Column '{self.column}': max_value must be a finite number, found {self.max_value}."
-                )
+        # 3. Validate numeric range bounds types and values
+        for bound_name, bound_val in (("min_value", self.min_value), ("max_value", self.max_value)):
+            if bound_val is not None:
+                # Reject bool explicitly because bool is a subclass of int in Python
+                if isinstance(bound_val, bool) or not isinstance(bound_val, (int, float)):
+                    raise TypeError(
+                        f"Column '{self.column}': {bound_name} must be an int or float, "
+                        f"found {type(bound_val).__name__}."
+                    )
+                # Reject NaN or infinite values in float bounds
+                if isinstance(bound_val, float) and (math.isnan(bound_val) or math.isinf(bound_val)):
+                    raise ValueError(
+                        f"Column '{self.column}': {bound_name} must be a finite number, found {bound_val}."
+                    )
 
         # 4. Reject contradictory ranges (min_value > max_value)
         if self.min_value is not None and self.max_value is not None:
@@ -87,7 +90,7 @@ class ColumnRule:
         if val_str == "":
             return True, None  # Empty values are handled by the completeness dimension
 
-        numeric_val: Optional[float] = None
+        numeric_val: Optional[Union[int, float]] = None
 
         # 1. Type validation
         if self.data_type == "int":
@@ -96,7 +99,7 @@ class ColumnRule:
                 if "." in val_str:
                     return False, f"Expected integer, found decimal value '{val_str}'"
                 int_val = int(val_str)
-                numeric_val = float(int_val)
+                numeric_val = int_val
             except ValueError:
                 return False, f"Expected integer, found non-numeric value '{val_str}'"
 
