@@ -135,10 +135,9 @@ def load_csv_from_stream(stream: TextIO, file_path: str = "<in-memory>") -> File
         is_blank_line = (
             len(row) == 0
             or (len(row) == 1 and row[0].strip() == "" and len(headers) > 1)
-            or (len(headers) == 1 and len(row) == 1 and row[0] == "")
         )
+
         if is_blank_line:
-            # Do not synthesize fake records for blank physical lines
             continue
 
         # Check for row length mismatch (malformed row)

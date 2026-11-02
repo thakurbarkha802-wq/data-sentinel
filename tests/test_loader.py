@@ -160,6 +160,24 @@ class TestCSVLoader(unittest.TestCase):
         finally:
             tmp_path.unlink(missing_ok=True)
 
+    def test_single_column_empty_record_is_preserved(self):
+        """An empty CSV record in a single-column file must not be skipped."""
+        with tempfile.NamedTemporaryFile(
+            "w", delete=False, suffix=".csv", encoding="utf-8"
+        ) as tmp:
+            tmp.write('name\nAlice\n""\nBob\n')
+            tmp_path = Path(tmp.name)
+
+        try:
+            result = load_csv(tmp_path)
+
+            self.assertEqual(len(result.rows), 3)
+            self.assertEqual(result.rows[0][1], ["Alice"])
+            self.assertEqual(result.rows[1][1], [""])
+            self.assertEqual(result.rows[2][1], ["Bob"])
+        finally:
+            tmp_path.unlink(missing_ok=True)
+
 
 if __name__ == "__main__":
     unittest.main()
